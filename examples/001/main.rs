@@ -5,6 +5,8 @@ use svg::Document;
 
 // inspired from https://github.com/gre/shaderday.com/blob/master/day/015.js
 // Kudos to 0xB0nnaz for the formula
+// x(t) = sin(PI * t) + 0.8 * sin(4 * PI * t) + 0.5 * sin(128 * PI * t)
+// y(t) = cos(PI * t) + 0.8 * cos(4 * PI * t) + 0.5 * cos(128 * PI * t)
 
 fn parametric(t: f64) -> (f64, f64) {
     return (
