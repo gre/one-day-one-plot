@@ -6,19 +6,27 @@ use svg::Document;
 
 fn main() {
     let data = Data::new()
-        .move_to((10, 10))
-        .line_by((0, 50))
-        .line_by((50, 0))
-        .line_by((0, -50))
+        .move_to((50, 50))
+        .line_by((50, 100))
+        .line_by((100, 50))
+        .line_by((50, -100))
         .close();
 
     let path = Path::new()
         .set("fill", "none")
-        .set("stroke", "red")
-        .set("stroke-width", 3)
+        .set("stroke", "black")
+        .set("stroke-width", 1)
         .set("d", data);
 
-    let document = Document::new().set("viewBox", (0, 0, 70, 70)).add(path);
+    let document = Document::new()
+        .set(
+            "xmlns:inkscape",
+            "http://www.inkscape.org/namespaces/inkscape",
+        )
+        .set("viewBox", (0, 0, 297, 210))
+        .set("width", "297mm")
+        .set("height", "210mm")
+        .add(path);
 
     svg::save("image.svg", &document).unwrap();
 }

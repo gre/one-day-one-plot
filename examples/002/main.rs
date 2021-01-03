@@ -21,7 +21,7 @@ impl GameOfLife {
         return (x, y);
     }
     fn alive(&self, x: usize, y: usize) -> bool {
-        if x < 0 || y < 0 || x >= self.width || y >= self.height {
+        if x >= self.width || y >= self.height {
             return false;
         }
         let alive = self.cells[self.index(x, y)];
@@ -115,7 +115,7 @@ fn main() {
         }
         s = f64::min(s, 0.5);
         loop {
-            if (s < 0.1) {
+            if s < 0.1 {
                 break;
             }
             let circle = Circle::new()
