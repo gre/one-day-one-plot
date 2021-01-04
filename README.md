@@ -2,6 +2,11 @@ Similarly to "One day, One shader" ( https://github.com/gre/shaderday.com ), I'm
 
 This [Rust](https://www.rust-lang.org/) project uses `examples/` that generates a SVG file, then plotted with Inkscape + Axidraw.
 
+see 
+https://twitter.com/greweb/status/1344741218962563072?s=19
+
+---
+
 (replace 000 with day number)
 
 ```
