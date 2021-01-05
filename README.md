@@ -1,9 +1,14 @@
-Similarly to "One day, One shader" ( https://github.com/gre/shaderday.com ), I'm going to "plot" every day.
+Similarly to "One day, One shader" ( https://github.com/gre/shaderday.com ), this [Rust](https://www.rust-lang.org/) project is a "generative art" that, for each entry in `examples/`, generates a SVG file and plot it with an AxiDraw.
 
-This [Rust](https://www.rust-lang.org/) project uses `examples/` that generates a SVG file, then plotted with Inkscape + Axidraw.
+**I also share them on https://twitter.com/greweb/status/1344741218962563072?s=19**
 
-see 
-https://twitter.com/greweb/status/1344741218962563072?s=19
+### January 2021
+
+<a href="examples/001"><img height="200" src="./examples/001/photo.jpg"/></a>
+<a href="examples/002"><img height="200" src="./examples/002/IMG_20210102_102357.jpg"/></a>
+<a href="examples/003"><img height="200" src="./examples/003/IMG_20210103_084109.jpg"/></a>
+<a href="examples/004"><img height="200" src="./examples/004/image.jpg"/></a>
+<a href="examples/005"><img height="200" src="./examples/005/IMG_20210104_212108__01.jpg"/></a>
 
 ---
 
