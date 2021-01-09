@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 use svg::node::element::path::Data;
 use svg::node::element::*;
 use svg::Document;
