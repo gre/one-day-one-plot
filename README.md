@@ -14,6 +14,8 @@ Similarly to "One day, One shader" ( https://github.com/gre/shaderday.com ), thi
 <a href="examples/008"><img height="200" src="./examples/008/photo.jpg"/></a>
 <a href="examples/009"><img height="200" src="./examples/009/photo_y1.jpg"/></a>
 <a href="examples/010"><img height="200" src="./examples/010/photo.jpg"/></a>
+<a href="examples/011"><img height="200" src="./examples/011/photo.jpg"/></a>
+<a href="examples/012"><img height="200" src="./examples/012/photo.jpg"/></a>
 
 ---
 

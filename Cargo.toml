@@ -10,8 +10,8 @@ edition = "2018"
 svg = "0.8.0"
 image = "0.23"
 rand = "0.5.6"
-ncollide2d = "0.22"
-ncollide3d = "0.22"
+kiss3d = "0.29"
+noise = "0.7"
 tokio = { version = "0.2", features = ["macros"] }
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
