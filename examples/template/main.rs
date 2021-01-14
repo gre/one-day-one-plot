@@ -26,7 +26,8 @@ fn main() {
         .set("viewBox", (0, 0, 297, 210))
         .set("width", "297mm")
         .set("height", "210mm")
-        .add(path);
+        .add(path)
+        .add(gre::signature(1.0, (265.0, 195.0)));
 
     svg::save("image.svg", &document).unwrap();
 }
