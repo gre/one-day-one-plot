@@ -1,74 +1,58 @@
 extern crate gre;
-
 use svg::node::element::path::Data;
 use svg::node::element::Path;
 use svg::Document;
 
-fn cistercian_gen(
-    data: Data,
-    x: f32,
-    y: f32,
-    scale: f32,
-    n: u32,
-    flipx: bool,
-    flipy: bool,
-) -> Data {
-    let m = |mut dx, dy| {
-        if flipx {
-            dx *= -1.0;
-        };
-        if flipy {
-            return (x + scale * dx, y - (3.0 - dy) * scale);
-        } else {
-            return (x + scale * dx, y - dy * scale);
-        }
-    };
-    match n % 10 {
-        1 => data.move_to(m(0.0, 3.0)).line_to(m(1.0, 3.0)),
-        2 => data.move_to(m(0.0, 2.0)).line_to(m(1.0, 2.0)),
-        3 => data.move_to(m(0.0, 3.0)).line_to(m(1.0, 2.0)),
-        4 => data.move_to(m(0.0, 2.0)).line_to(m(1.0, 3.0)),
-        5 => data
-            .move_to(m(0.0, 3.0))
-            .line_to(m(1.0, 3.0))
-            .line_to(m(0.0, 2.0)),
-        6 => data.move_to(m(1.0, 3.0)).line_to(m(1.0, 2.0)),
-        7 => data
-            .move_to(m(1.0, 2.0))
-            .line_to(m(1.0, 3.0))
-            .line_to(m(0.0, 3.0)),
-        8 => data
-            .move_to(m(0.0, 2.0))
-            .line_to(m(1.0, 2.0))
-            .line_to(m(1.0, 3.0)),
-        9 => data
-            .move_to(m(0.0, 2.0))
-            .line_to(m(1.0, 2.0))
-            .line_to(m(1.0, 3.0))
-            .line_to(m(0.0, 3.0)),
-        _ => data,
-    }
-}
-
 // https://en.wikipedia.org/wiki/Cistercian_numerals
 // use 2x3mm base. use scale to scale that. centered on bottom-center
 fn cistercian(n: u32, x: f32, y: f32, scale: f32) -> Data {
-    let mut data = Data::new();
-    data = data.move_to((x, y));
-    data = data.line_to((x, y - 3.0 * scale));
-    data = cistercian_gen(data, x, y, scale, n % 10, false, false);
-    data = cistercian_gen(data, x, y, scale, (n / 10) % 10, true, false);
-    data = cistercian_gen(data, x, y, scale, (n / 100) % 10, false, true);
-    data = cistercian_gen(data, x, y, scale, (n / 1000) % 10, true, true);
-    return data;
+    let gen = |d: Data, n, flipx, flipy| {
+        let m = |mut dx, mut dy| {
+            if flipx {
+                dx *= -1;
+            };
+            if flipy {
+                dy = 3 - dy;
+            }
+            (x + scale * (dx as f32), y - (dy as f32) * scale)
+        };
+        match n {
+            1 => d.move_to(m(0, 3)).line_to(m(1, 3)),
+            2 => d.move_to(m(0, 2)).line_to(m(1, 2)),
+            3 => d.move_to(m(0, 3)).line_to(m(1, 2)),
+            4 => d.move_to(m(0, 2)).line_to(m(1, 3)),
+            5 => d.move_to(m(0, 3)).line_to(m(1, 3)).line_to(m(0, 2)),
+            6 => d.move_to(m(1, 3)).line_to(m(1, 2)),
+            7 => d.move_to(m(1, 2)).line_to(m(1, 3)).line_to(m(0, 3)),
+            8 => d.move_to(m(0, 2)).line_to(m(1, 2)).line_to(m(1, 3)),
+            9 => d
+                .move_to(m(0, 2))
+                .line_to(m(1, 2))
+                .line_to(m(1, 3))
+                .line_to(m(0, 3)),
+            _ => d,
+        }
+    };
+
+    let mut d = Data::new().move_to((x, y)).line_to((x, y - 3.0 * scale));
+    // it's made of a same pattern that repeats with some reflection
+    d = gen(d, n % 10, false, false);
+    d = gen(d, (n / 10) % 10, true, false);
+    d = gen(d, (n / 100) % 10, false, true);
+    d = gen(d, (n / 1000) % 10, true, true);
+    return d;
 }
 
 fn main() {
     let mut paths = vec![];
 
+    let line_w = 30;
+    let offset = (15.0, 30.0);
+    let cell = (9.0, 11.0);
+    let size = 2.0;
     for i in 0..1000 {
-        let x = i % 30;
-        let y = i / 30;
+        let x = i % line_w;
+        let y = i / line_w;
         paths.push(
             Path::new()
                 .set("fill", "none")
@@ -76,7 +60,12 @@ fn main() {
                 .set("stroke-width", 0.2)
                 .set(
                     "d",
-                    cistercian(i, 15.0 + (x as f32) * 9.0, 30.0 + (y as f32) * 11.0, 2.0),
+                    cistercian(
+                        i,
+                        offset.0 + (x as f32) * cell.0,
+                        offset.1 + (y as f32) * cell.1,
+                        size,
+                    ),
                 ),
         );
     }
