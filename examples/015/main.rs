@@ -79,7 +79,7 @@ fn main() {
         .set("viewBox", (0, 0, 297, 420))
         .set("width", "297mm")
         .set("height", "420mm")
-        .add(gre::signature(1.0, (265.0, 405.0)));
+        .add(gre::signature(1.0, (265.0, 405.0), "black"));
     for path in paths {
         document = document.add(path);
     }
