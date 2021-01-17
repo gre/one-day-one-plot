@@ -27,7 +27,7 @@ fn main() {
         .set("width", "297mm")
         .set("height", "210mm")
         .add(path)
-        .add(gre::signature(1.0, (265.0, 195.0)));
+        .add(gre::signature(1.0, (265.0, 195.0), "black"));
 
     svg::save("image.svg", &document).unwrap();
 }
