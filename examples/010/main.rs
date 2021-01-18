@@ -164,7 +164,7 @@ fn vectorize_as_random_waves(
             println!(
                 "{} {}: {} meters",
                 id,
-                color
+                color,
                 totalMMstatus.round() / 1000.0,
             );
             return Group::new().add(

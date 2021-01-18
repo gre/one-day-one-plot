@@ -11,6 +11,7 @@ name = "gre"
 path = "src/lib.rs"
 
 [dependencies]
+geo = "0.17"
 svg = "0.8.0"
 image = "0.23"
 rand = "0.5.6"
