@@ -1,8 +1,6 @@
 use svg::node::element::path::Data;
-use svg::node::element::Path;
+use svg::node::element::*;
 use svg::Document;
-
-// https://docs.rs/svg/0.8.0/svg/
 
 fn main() {
     let data = Data::new()
