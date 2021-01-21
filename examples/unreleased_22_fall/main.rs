@@ -18,12 +18,18 @@ struct Config {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let seed = args
+        .get(1)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(32.0);
+
     let mut groups = Vec::new();
 
     let configs = vec![Config {
-        seed: 0.0,
+        seed,
         lines: 200,
-        length: 200.0,
+        length: 300.0,
     }];
 
     for c in configs {
@@ -35,15 +41,14 @@ fn main() {
         let field = |(x, y): (f64, f64)| {
             PI / 2.0
                 + (1.0 - (2.0 * x - 1.0).abs())
-                    * (0.1 + y)
-                    * (perlin.get([8.0 * x, 8.0 * y, c.seed])
-                        + perlin.get([32.0 * x, 32.0 * y, c.seed])
-                        + perlin.get([80.0 * x, 80.0 * y, c.seed]))
+                    * (1.5 * perlin.get([4.0 * x, 3.0 * y, c.seed])
+                        + y * perlin.get([10.0 * x, 7.0 * y, 1.0 + c.seed])
+                        + 0.4 * perlin.get([40.0 * x, 30.0 * y, 3.0 + c.seed]))
         };
 
         let mut data = Data::new();
 
-        let boundaries = (10.0, 10.0, 260.0, 190.0);
+        let boundaries = (10.0, 10.0, 269.0, 195.0);
         let lines = c.lines;
         let precision = 1.0;
         let iterations = (c.length / precision) as usize;
@@ -82,7 +87,7 @@ fn main() {
         let path = Path::new()
             .set("fill", "none")
             .set("stroke", color)
-            .set("stroke-width", 0.4)
+            .set("stroke-width", 0.2)
             .set("d", data);
 
         groups.push(layer(color).add(path));
@@ -97,7 +102,7 @@ fn main() {
         .set("viewBox", (0, 0, 297, 210))
         .set("width", "297mm")
         .set("height", "210mm")
-        .add(gre::signature(1.0, (175.0, 195.0), "black"));
+        .add(gre::signature(1.0, (263.0, 195.0), "black"));
     for g in groups {
         document = document.add(g);
     }
