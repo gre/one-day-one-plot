@@ -1,6 +1,7 @@
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
 use svg::node::element::*;
+use svg::Document;
 
 pub mod line_intersection;
 
@@ -54,4 +55,28 @@ pub fn layer(id: &str) -> Group {
     return Group::new()
         .set("inkscape:groupmode", "layer")
         .set("inkscape:label", id);
+}
+
+pub fn base_a4_portrait(bg: &str) -> Document {
+    Document::new()
+        .set(
+            "xmlns:inkscape",
+            "http://www.inkscape.org/namespaces/inkscape",
+        )
+        .set("viewBox", (0, 0, 210, 297))
+        .set("width", "210mm")
+        .set("height", "297mm")
+        .set("style", format!("background:{}", bg))
+}
+
+pub fn base_a4_landscape(bg: &str) -> Document {
+    Document::new()
+        .set(
+            "xmlns:inkscape",
+            "http://www.inkscape.org/namespaces/inkscape",
+        )
+        .set("viewBox", (0, 0, 297, 210))
+        .set("width", "297mm")
+        .set("height", "210mm")
+        .set("style", format!("background:{}", bg))
 }

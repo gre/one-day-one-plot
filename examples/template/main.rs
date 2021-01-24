@@ -38,7 +38,7 @@ fn main() {
         .set("viewBox", (0, 0, 297, 210))
         .set("width", "297mm")
         .set("height", "210mm")
-        .add(signature(1.0, (260.0, 196.0), "black"));
+        .add(signature(1.0, (260.0, 190.0), "black"));
     for g in groups {
         document = document.add(g);
     }
