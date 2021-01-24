@@ -753,6 +753,7 @@ dependencies = [
  "image",
  "kiss3d",
  "noise",
+ "num-traits",
  "rand 0.5.6",
  "reqwest",
  "serde",

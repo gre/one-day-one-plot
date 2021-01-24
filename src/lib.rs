@@ -1,6 +1,8 @@
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
-use svg::node::element::Path;
+use svg::node::element::*;
+
+pub mod line_intersection;
 
 // usual scale is 1.0 for A4
 pub fn signature(scale: f64, translation: (f64, f64), color: &str) -> Path {
@@ -46,4 +48,10 @@ pub fn image_get_color(
         let b = (pixel[2] as f64) / 255.0;
         return (r, g, b);
     });
+}
+
+pub fn layer(id: &str) -> Group {
+    return Group::new()
+        .set("inkscape:groupmode", "layer")
+        .set("inkscape:label", id);
 }
