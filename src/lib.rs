@@ -41,8 +41,8 @@ pub fn image_get_color(
     let img = ImageReader::open(path)?.decode()?;
     let (width, height) = img.dimensions();
     return Ok(move |(x, y)| {
-        let xi = (x * (width as f64)) as u32;
-        let yi = (y * (height as f64)) as u32;
+        let xi = (x * ((width - 1) as f64)) as u32;
+        let yi = (y * ((height - 1) as f64)) as u32;
         let pixel = img.get_pixel(xi, yi);
         let r = (pixel[0] as f64) / 255.0;
         let g = (pixel[1] as f64) / 255.0;
