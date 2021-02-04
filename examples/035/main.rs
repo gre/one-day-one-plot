@@ -14,15 +14,15 @@ fn main() {
         .unwrap_or(0.0);
 
     let resolution = 800;
-    let samples = 8000;
-    let group_min_size = 20;
-    let group_samples = 300;
-    let proximity_threshold = 0.07;
-    let noise_frequency1 = 6.0;
-    let noise_amp1 = 1.0;
-    let noise_frequency2 = 2.0;
+    let samples = 10000;
+    let group_min_size = 30;
+    let group_samples = 400;
+    let proximity_threshold = 0.06;
+    let noise_frequency1 = 11.;
+    let noise_amp1 = 0.6;
+    let noise_frequency2 = 2.;
     let noise_amp2 = 0.5;
-    let noise_threshold = 0.25;
+    let noise_threshold = 0.2;
 
     let mut rng = SmallRng::from_seed([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     let perlin = Perlin::new();
