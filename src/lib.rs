@@ -80,3 +80,14 @@ pub fn base_a4_landscape(bg: &str) -> Document {
         .set("height", "210mm")
         .set("style", format!("background:{}", bg))
 }
+
+pub fn normalize_in_boundaries(p: (f64, f64), boundaries: (f64, f64, f64, f64)) -> (f64, f64) {
+    (
+        (p.0 - boundaries.0) / (boundaries.2 - boundaries.0),
+        (p.1 - boundaries.1) / (boundaries.3 - boundaries.1),
+    )
+}
+
+pub fn out_of_boundaries(p: (f64, f64), boundaries: (f64, f64, f64, f64)) -> bool {
+    p.0 < boundaries.0 || p.0 > boundaries.2 || p.1 < boundaries.1 || p.1 > boundaries.3
+}
