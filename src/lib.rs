@@ -1,5 +1,6 @@
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
+use svg::node::element::path::Data;
 use svg::node::element::*;
 use svg::Document;
 
@@ -79,6 +80,14 @@ pub fn base_a4_landscape(bg: &str) -> Document {
         .set("width", "297mm")
         .set("height", "210mm")
         .set("style", format!("background:{}", bg))
+}
+
+pub fn base_path(color: &str, stroke_width: f64, data: Data) -> Path {
+    Path::new()
+        .set("fill", "none")
+        .set("stroke", color)
+        .set("stroke-width", stroke_width)
+        .set("d", data)
 }
 
 pub fn normalize_in_boundaries(p: (f64, f64), boundaries: (f64, f64, f64, f64)) -> (f64, f64) {
