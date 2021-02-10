@@ -2,37 +2,37 @@ use geo::{Line};
 use gre::line_intersection::*;
 use gre::*;
 use noise::*;
+use std::f64::consts::PI;
 use svg::node::element::path::Data;
 use svg::node::element::*;
 
 fn round_point ((x,y):(f64,f64)) -> (f64, f64) {
-    let mag = 1000.0; // TODO play with diff values
-    ((x*mag).round()/mag, (y*mag).round()/mag)
+    let precision = 0.01;
+    ((x/precision).round()*precision, (y/precision).round()*precision)
 }
 
-fn art(seed: f64, dim: usize, force:f64, length: f64) -> Vec<Group> {
+fn art(seed: f64, dim: usize, force:f64, length: f64, squares: Vec<&str>, freq_mul: f64, rotate: f64, small: f64, big: f64, length_mul: f64) -> Vec<Group> {
     let perlin = Perlin::new();
     let mut groups = Vec::new();
 
     let field = |xp: f64, yp: f64| -> f64 {
 (        yp-0.5).atan2(xp-0.5)+force *(
-        4.0 * perlin.get([2. * xp, 2. * yp, seed + 1.])
-            + 2.0 * perlin.get([4. * xp, 4. * yp, seed + 2.])
-            + 0.5 * perlin.get([20. * xp, 20. * yp, seed + 3.]))
+        4.0 * perlin.get([freq_mul * xp, freq_mul * yp, seed + 1.])
+            + 2.0 * perlin.get([freq_mul * 3. * xp, freq_mul * 3. * yp, seed + 2.])
+            + 0.5 * perlin.get([freq_mul * 15. * xp, freq_mul * 15. * yp, seed + 3.]))
     };
 
     // VLine is our struct define below that record vertex lines
     let mut vlines: Vec<VLine> = Vec::new();
 
-    let pad = 2.0;
-    let squares = vec!["white", "gold", "orange"];
+    let pad = 5.0;
     for (group, color) in squares.iter().enumerate() {
         let mut group_vlines = Vec::new();
-        let gf = group as f64;
-        let sz = 10.0 + gf * 20.0;
+        let gf = (group as f64) / (squares.len() as f64);
+        let sz = small + gf * (big-small);
         let o = 105. - sz;
-        let x_o = o;
-        let y_o = 30.0 + o;
+        let x_o = (297.-210.)/2.0 + o;
+        let y_o = o;
         let width = 2. * sz;
         let height = 2. * sz;
 
@@ -43,12 +43,26 @@ fn art(seed: f64, dim: usize, force:f64, length: f64) -> Vec<Group> {
                 if x.min(y)!=0 && x.max(y)!=dim-1 {
                     continue;
                 }
-                let origin = round_point((x_o + width * xp, y_o + height * yp));
+                let mut xo = x_o + width * xp;
+                let mut yo = y_o + height * yp;
+                xo -= x_o + width / 2.0;
+                yo -= y_o + height / 2.0;
+                let a = rotate * (PI / 2.0) * (group as f64);
+                let r = (
+                    a.cos() * xo + -a.sin() * yo,
+                    a.sin() * xo + a.cos() * yo,
+                );
+                xo = r.0;
+                yo = r.1;
+                xo += x_o + width / 2.0;
+                yo += y_o + height / 2.0;
+
+                let origin = round_point((xo, yo));
                 let mut vline = VLine::new(group, origin);
                 let granularity = 1.0;
-                for _i in 0..((length/granularity) as usize) {
+                for _i in 0..((length_mul.powf(group as f64) * length / granularity) as usize) {
                     let cur = vline.current();
-                    if cur.0 < pad || cur.1 < pad || cur.0 > 210.-pad || cur.1 > 297.-pad {
+                    if cur.0 < pad || cur.1 < pad || cur.0 > 297.-pad || cur.1 > 210.-pad {
                         break;
                     }
                     let angle = field((cur.0 - x_o) / width, (cur.1 - y_o) / height);
@@ -60,8 +74,10 @@ fn art(seed: f64, dim: usize, force:f64, length: f64) -> Vec<Group> {
                     }
                     vline.go(next);
                 }
-                vlines.push(vline.clone());
-                group_vlines.push(vline);
+                if vline.points.len() > 5 {
+                    vlines.push(vline.clone());
+                    group_vlines.push(vline);
+                }
             }
         }
         let data = group_vlines.iter().fold(Data::new(), |data, vl| vl.draw(data));
@@ -89,12 +105,34 @@ fn main() {
         .get(4)
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(100.0);
-    let groups = art(seed, lines, force, length);
-    let mut document = base_a4_portrait("black");
+    let colors =
+        args.get(5)
+        .map(|s| s.split(",").collect::<Vec<&str>>())
+        .unwrap_or(vec!["white", "gold", "orange"]);
+    let default_bg = String::from("black");
+    let bg = args.get(6).unwrap_or(&default_bg);
+    let freq_mul = args.get(7)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(1.0);
+    let rotate = args.get(8)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.5);
+    let small = args.get(9)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(20.0);
+    let big = args.get(10)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(80.0);
+    let length_mul = args.get(11)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(1.0);
+
+    let groups = art(seed, lines, force, length, colors.clone(), freq_mul, rotate, small, big, length_mul);
+    let mut document = base_a4_landscape(bg);
     for g in groups {
         document = document.add(g);
     }
-    document = document.add(signature(1.0, (180.0, 280.0), "white"));
+    document = document.add(signature(1.0, (260.0, 190.0), colors[0]));
     svg::save("image.svg", &document).unwrap();
 }
 
