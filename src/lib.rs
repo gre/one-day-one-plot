@@ -1,19 +1,28 @@
+use geo::*;
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
+use prelude::{BoundingRect, Contains};
+use rand::prelude::*;
+use std::f64::consts::PI;
 use svg::node::element::path::Data;
-use svg::node::element::*;
+use svg::node::element::{Group, Path};
 use svg::Document;
+use time::Duration;
 
 pub mod line_intersection;
 
 // usual scale is 1.0 for A4
-pub fn signature(scale: f64, translation: (f64, f64), color: &str) -> Path {
-    return Path::new().
+pub fn signature(
+    scale: f64,
+    translation: (f64, f64),
+    color: &str,
+) -> Group {
+    return layer("signature").add(Path::new().
         set("d", "m 15.815664,12.893319 c -1.445284,-3.0999497 -5.555449,-0.3575 -5.08537,2.32203 1.697826,2.92736 4.504013,-3.54417 4.40859,-2.58178 -1.548999,2.22986 0.741131,6.08701 3.012419,3.25791 2.532153,-2.82358 0.259001,-7.8326797 -3.488671,-7.9011197 -3.217272,0.056 -5.8863857,2.4603197 -7.9308737,4.7238797 -2.354585,2.46752 0.0048,5.887 2.757763,6.62143 3.2195457,1.10867 6.8759417,1.30834 9.9459317,-0.36585 2.270396,-1.12373 5.025949,-2.62031 5.680576,-5.20027 -2.108811,-3.66096 -6.038415,1.28356 -3.842036,3.67822 1.07278,0.89979 4.586982,-2.27037 3.201668,-2.73503 0.03094,3.24357 1.226854,6.37852 1.337023,9.60311 -0.672198,3.54892 -7.469251,0.32096 -4.637082,-2.5164 2.158436,-2.4193 5.610472,-2.84094 8.202925,-4.57369 0.993877,-1.40371 0.353413,-5.25046 3.182464,-3.48957 2.142923,1.43516 -2.250898,5.7532 1.723416,5.02339 1.661189,-0.71663 6.494946,-1.40457 4.601401,-3.95236 -4.205319,-0.68052 -1.190571,5.86505 1.665411,3.46881 1.929752,-0.9247 2.778055,-4.05119 1.423645,-5.35034 0.479155,1.8589 3.849911,7.52574 4.880369,3.32696 0.21201,-1.28088 0.40468,-3.80204 1.01246,-1.23041 0.5858,2.6865 3.83412,4.91909 4.56937,1.07383 0.65272,-1.00894 -0.2696,-4.02739 0.99929,-1.35746 1.10974,2.31613 6.32001,1.46113 6.147,-1.13059 -1.98394,-2.13868 -5.3717,1.45205 -3.78252,3.73454 2.57741,0.96208 6.69797,-0.21041 7.06275,-3.33983 0.41287,-2.63769 0.26643,-5.3430297 -0.11178,-7.9756197 0.67418,3.94149 1.24889,7.9380497 2.39963,11.7713397 2.10586,1.67977 5.7434,1.65022 7.74596,-0.23639 3.03149,-1.85431 -0.26637,-4.76925 -2.71777,-4.54025 -2.11577,0.0793 -5.36257,2.40772 -5.16868,3.85604 2.08262,-2.38818 5.55759,-1.22628 8.30726,-1.6832 3.182,-0.26596 6.46546,-0.57372 9.54494,-1.18158 0.24171,0.4199 -0.27752,0.54338 -0.43067,0.17453")
         .set("fill","none")
         .set("stroke", color)
         .set("stroke-width", 1)
-        .set("transform", format!("translate({},{}) scale({})", translation.0, translation.1, 0.3 * scale));
+        .set("transform", format!("translate({},{}) scale({})", translation.0, translation.1, 0.3 * scale)));
 }
 
 pub fn grayscale((r, g, b): (f64, f64, f64)) -> f64 {
@@ -26,7 +35,9 @@ pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
 }
 
 // see also https://en.wikipedia.org/wiki/CMYK_color_model
-pub fn rgb_to_cmyk((r, g, b): (f64, f64, f64)) -> (f64, f64, f64, f64) {
+pub fn rgb_to_cmyk(
+    (r, g, b): (f64, f64, f64),
+) -> (f64, f64, f64, f64) {
     let k = 1.0 - r.max(g).max(b);
     let c = (1.0 - r - k) / (1.0 - k);
     let m = (1.0 - g - k) / (1.0 - k);
@@ -38,7 +49,10 @@ pub fn rgb_to_cmyk((r, g, b): (f64, f64, f64)) -> (f64, f64, f64, f64) {
 // returned value is a rgb tuple in 0..1 range
 pub fn image_get_color(
     path: &str,
-) -> Result<impl Fn((f64, f64)) -> (f64, f64, f64), image::ImageError> {
+) -> Result<
+    impl Fn((f64, f64)) -> (f64, f64, f64),
+    image::ImageError,
+> {
     let img = ImageReader::open(path)?.decode()?;
     let (width, height) = img.dimensions();
     return Ok(move |(x, y)| {
@@ -82,7 +96,11 @@ pub fn base_a4_landscape(bg: &str) -> Document {
         .set("style", format!("background:{}", bg))
 }
 
-pub fn base_path(color: &str, stroke_width: f64, data: Data) -> Path {
+pub fn base_path(
+    color: &str,
+    stroke_width: f64,
+    data: Data,
+) -> Path {
     Path::new()
         .set("fill", "none")
         .set("stroke", color)
@@ -90,13 +108,165 @@ pub fn base_path(color: &str, stroke_width: f64, data: Data) -> Path {
         .set("d", data)
 }
 
-pub fn normalize_in_boundaries(p: (f64, f64), boundaries: (f64, f64, f64, f64)) -> (f64, f64) {
+pub fn normalize_in_boundaries(
+    p: (f64, f64),
+    boundaries: (f64, f64, f64, f64),
+) -> (f64, f64) {
     (
-        (p.0 - boundaries.0) / (boundaries.2 - boundaries.0),
-        (p.1 - boundaries.1) / (boundaries.3 - boundaries.1),
+        (p.0 - boundaries.0)
+            / (boundaries.2 - boundaries.0),
+        (p.1 - boundaries.1)
+            / (boundaries.3 - boundaries.1),
     )
 }
 
-pub fn out_of_boundaries(p: (f64, f64), boundaries: (f64, f64, f64, f64)) -> bool {
-    p.0 < boundaries.0 || p.0 > boundaries.2 || p.1 < boundaries.1 || p.1 > boundaries.3
+pub fn out_of_boundaries(
+    p: (f64, f64),
+    boundaries: (f64, f64, f64, f64),
+) -> bool {
+    p.0 < boundaries.0
+        || p.0 > boundaries.2
+        || p.1 < boundaries.1
+        || p.1 > boundaries.3
+}
+
+pub fn render_polygon_stroke(
+    data: Data,
+    poly: Polygon<f64>,
+) -> Data {
+    let mut first = true;
+    let mut d = data;
+    for p in poly.exterior().points_iter() {
+        if first {
+            first = false;
+            d = d.move_to(p.x_y());
+        } else {
+            d = d.line_to(p.x_y());
+        }
+    }
+    d
+}
+
+pub fn samples_polygon(
+    poly: Polygon<f64>,
+    samples: usize,
+    rng: &mut SmallRng,
+) -> Vec<(f64, f64)> {
+    let bounds = poly.bounding_rect().unwrap();
+    let sz = 32;
+    let mut candidates = Vec::new();
+    for x in 0..sz {
+        for y in 0..sz {
+            let o: Point<f64> = bounds.min().into();
+            let p: Point<f64> = o + point!(
+                x: x as f64 * bounds.width(),
+                y: y as f64 * bounds.height()
+            ) / (sz as f64);
+            if poly.contains(&p) {
+                candidates.push(p.x_y());
+            }
+        }
+    }
+    rng.shuffle(&mut candidates);
+    candidates.truncate(samples);
+    return candidates;
+}
+
+pub fn render_route(
+    data: Data,
+    route: Vec<(f64, f64)>,
+) -> Data {
+    let mut first = true;
+    let mut d = data;
+    for p in route {
+        if first {
+            first = false;
+            d = d.move_to(p);
+        } else {
+            d = d.line_to(p);
+        }
+    }
+    return d;
+}
+
+pub fn render_polygon_fill_tsp(
+    data: Data,
+    poly: Polygon<f64>,
+    samples: usize,
+    rng: &mut SmallRng,
+    duration: Duration,
+) -> Data {
+    let candidates = samples_polygon(poly, samples, rng);
+    let tour =
+        travelling_salesman::simulated_annealing::solve(
+            &candidates,
+            duration,
+        );
+    return render_route(
+        data,
+        tour.route.iter().map(|&i| candidates[i]).collect(),
+    );
+}
+
+pub fn render_polygon_fill_spiral(
+    data: Data,
+    poly: Polygon<f64>,
+    samples: usize,
+    rng: &mut SmallRng,
+) -> Data {
+    let candidates = samples_polygon(poly, samples, rng);
+    if candidates.len() == 0 {
+        return data;
+    }
+    let mut result = Vec::new();
+    let mut list = candidates.clone();
+    let mut p = *(candidates
+        .iter()
+        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+        .unwrap());
+    let mut a = 0.0;
+    result.push(p);
+    loop {
+        list =
+            list.into_iter().filter(|&x| x != p).collect();
+
+        let maybe_match = list.iter().min_by_key(|q| {
+            let qp_angle = (p.1 - q.1).atan2(p.0 - q.0);
+            // HACK!!! no Ord for f64 :(
+            return (1000000.0
+                * ((2. * PI + qp_angle - a) % (2.0 * PI)))
+                as i32;
+        });
+        if let Some(new_p) = maybe_match {
+            a = (p.1 - new_p.1).atan2(p.0 - new_p.0);
+            p = *new_p;
+            result.push(p);
+        } else {
+            break;
+        }
+    }
+    return render_route(data, result);
+}
+
+pub fn sample_2d_candidates(
+    f: &dyn Fn((f64, f64)) -> bool,
+    dim: usize,
+    samples: usize,
+    rng: &mut SmallRng,
+) -> Vec<(f64, f64)> {
+    let mut candidates = Vec::new();
+    for x in 0..dim {
+        for y in 0..dim {
+            let p = (
+                (x as f64) / (dim as f64),
+                (y as f64) / (dim as f64),
+            );
+            if f(p) {
+                candidates.push(p);
+            }
+        }
+    }
+    rng.shuffle(&mut candidates);
+    candidates.truncate(samples);
+    return candidates;
 }
