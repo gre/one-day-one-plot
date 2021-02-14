@@ -5,7 +5,7 @@ use prelude::{BoundingRect, Contains};
 use rand::prelude::*;
 use std::f64::consts::PI;
 use svg::node::element::path::Data;
-use svg::node::element::{Group, Path};
+use svg::node::element::{Circle, Group, Path};
 use svg::Document;
 use time::Duration;
 
@@ -55,9 +55,12 @@ pub fn image_get_color(
 > {
     let img = ImageReader::open(path)?.decode()?;
     let (width, height) = img.dimensions();
-    return Ok(move |(x, y)| {
-        let xi = (x * ((width - 1) as f64)) as u32;
-        let yi = (y * ((height - 1) as f64)) as u32;
+    return Ok(move |(x, y): (f64, f64)| {
+        let xi = (x.max(0.0).min(1.0)
+            * ((width - 1) as f64)) as u32;
+        let yi = (y.max(0.0).min(1.0)
+            * ((height - 1) as f64))
+            as u32;
         let pixel = img.get_pixel(xi, yi);
         let r = (pixel[0] as f64) / 255.0;
         let g = (pixel[1] as f64) / 255.0;
@@ -147,7 +150,7 @@ pub fn render_polygon_stroke(
     d
 }
 
-pub fn samples_polygon(
+fn samples_polygon(
     poly: Polygon<f64>,
     samples: usize,
     rng: &mut SmallRng,
@@ -189,6 +192,62 @@ pub fn render_route(
     return d;
 }
 
+pub fn render_route_when(
+    data: Data,
+    route: Vec<(f64, f64)>,
+    should_draw_line: &dyn Fn(
+        (f64, f64),
+        (f64, f64),
+    ) -> bool,
+) -> Data {
+    let mut first = true;
+    let mut up = false;
+    let mut last = (0.0, 0.0);
+    let mut d = data;
+    for p in route {
+        if first {
+            first = false;
+            d = d.move_to(p);
+        } else {
+            if should_draw_line(last, p) {
+                if up {
+                    up = false;
+                    d = d.move_to(last);
+                }
+                d = d.line_to(p);
+            } else {
+                up = true;
+            }
+        }
+        last = p;
+    }
+    return d;
+}
+
+pub fn tsp(
+    candidates: Vec<(f64, f64)>,
+    duration: Duration,
+) -> Vec<(f64, f64)> {
+    let tour =
+        travelling_salesman::simulated_annealing::solve(
+            &candidates,
+            duration,
+        );
+    return tour
+        .route
+        .iter()
+        .map(|&i| candidates[i])
+        .collect();
+}
+
+pub fn render_tsp(
+    data: Data,
+    candidates: Vec<(f64, f64)>,
+    duration: Duration,
+) -> Data {
+    return render_route(data, tsp(candidates, duration));
+}
+
 pub fn render_polygon_fill_tsp(
     data: Data,
     poly: Polygon<f64>,
@@ -197,24 +256,13 @@ pub fn render_polygon_fill_tsp(
     duration: Duration,
 ) -> Data {
     let candidates = samples_polygon(poly, samples, rng);
-    let tour =
-        travelling_salesman::simulated_annealing::solve(
-            &candidates,
-            duration,
-        );
-    return render_route(
-        data,
-        tour.route.iter().map(|&i| candidates[i]).collect(),
-    );
+    return render_tsp(data, candidates, duration);
 }
 
-pub fn render_polygon_fill_spiral(
+pub fn render_fill_spiral(
     data: Data,
-    poly: Polygon<f64>,
-    samples: usize,
-    rng: &mut SmallRng,
+    candidates: Vec<(f64, f64)>,
 ) -> Data {
-    let candidates = samples_polygon(poly, samples, rng);
     if candidates.len() == 0 {
         return data;
     }
@@ -248,6 +296,16 @@ pub fn render_polygon_fill_spiral(
     return render_route(data, result);
 }
 
+pub fn render_polygon_fill_spiral(
+    data: Data,
+    poly: Polygon<f64>,
+    samples: usize,
+    rng: &mut SmallRng,
+) -> Data {
+    let candidates = samples_polygon(poly, samples, rng);
+    render_fill_spiral(data, candidates)
+}
+
 pub fn sample_2d_candidates(
     f: &dyn Fn((f64, f64)) -> bool,
     dim: usize,
@@ -269,4 +327,85 @@ pub fn sample_2d_candidates(
     rng.shuffle(&mut candidates);
     candidates.truncate(samples);
     return candidates;
+}
+
+// f returns a value from 0.0 to 1.0. if 0 the point is not considered, if 1 it's always taken in samples candidate. otherwise it's randomly filtered
+pub fn sample_2d_candidates_f64(
+    f: &dyn Fn((f64, f64)) -> f64,
+    dim: usize,
+    samples: usize,
+    rng: &mut SmallRng,
+) -> Vec<(f64, f64)> {
+    let mut candidates = Vec::new();
+    for x in 0..dim {
+        for y in 0..dim {
+            let p = (
+                (x as f64) / (dim as f64),
+                (y as f64) / (dim as f64),
+            );
+            if f(p) > rng.gen_range(0.0, 1.0) {
+                candidates.push(p);
+            }
+        }
+    }
+    rng.shuffle(&mut candidates);
+    candidates.truncate(samples);
+    return candidates;
+}
+
+pub fn render_debug_samples(pts: Vec<(f64, f64)>) -> Group {
+    let mut g = Group::new();
+    for p in pts {
+        g = g.add(
+            Circle::new()
+                .set("cx", p.0)
+                .set("cy", p.1)
+                .set("r", 1)
+                .set("fill", "black"),
+        );
+    }
+    return g;
+}
+
+// formula from https://www.youtube.com/watch?v=aNR4n0i2ZlM
+pub fn heart_distance(p: (f64, f64)) -> f64 {
+    let x = p.0;
+    let y = 4.0 + 1.2 * p.1
+        - x.abs() * ((20.0 - x.abs()) / 15.0).sqrt();
+    x * x + y * y - 10.0
+}
+
+// get in mm the side length of the bounding square that contains the polygon
+pub fn poly_bounding_square_edge(
+    poly: &Polygon<f64>,
+) -> f64 {
+    let bounds = poly.bounding_rect().unwrap();
+    bounds.width().max(bounds.height())
+}
+
+pub fn sample_square_voronoi_polys(
+    candidates: Vec<(f64, f64)>,
+    pad: f64,
+) -> Vec<Polygon<f64>> {
+    let mut points = Vec::new();
+    for c in candidates {
+        points.push(voronoi::Point::new(
+            pad + (1.0 - 2.0 * pad) * c.0,
+            pad + (1.0 - 2.0 * pad) * c.1,
+        ));
+    }
+    let dcel = voronoi::voronoi(points, 1.0);
+    let polys = voronoi::make_polygons(&dcel)
+        .iter()
+        .map(|pts| {
+            Polygon::new(
+                pts.iter()
+                    .map(|p| (p.x(), p.y()))
+                    .collect::<Vec<_>>()
+                    .into(),
+                vec![],
+            )
+        })
+        .collect();
+    polys
 }

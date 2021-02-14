@@ -771,6 +771,7 @@ dependencies = [
  "noise",
  "num-traits 0.2.14",
  "rand 0.5.6",
+ "rayon",
  "reqwest",
  "serde",
  "svg",
