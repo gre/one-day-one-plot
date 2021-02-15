@@ -409,3 +409,40 @@ pub fn sample_square_voronoi_polys(
         .collect();
     polys
 }
+
+pub fn euclidian_dist(
+    (x1, y1): (f64, f64),
+    (x2, y2): (f64, f64),
+) -> f64 {
+    let dx = x1 - x2;
+    let dy = y1 - y2;
+    return (dx * dx + dy * dy).sqrt();
+}
+
+pub fn group_by_proximity(
+    candidates: Vec<(f64, f64)>,
+    threshold: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    let mut groups: Vec<Vec<(f64, f64)>> = Vec::new();
+    let list = candidates.clone();
+
+    for item in list {
+        let mut found = false;
+        for group in &mut groups {
+            let matches = group.iter().any(|p| {
+                euclidian_dist(*p, item) < threshold
+            });
+            if matches {
+                found = true;
+                group.push(item);
+                break;
+            }
+        }
+        if !found {
+            let group = vec![item];
+            groups.push(group);
+        }
+    }
+
+    return groups;
+}
