@@ -259,12 +259,9 @@ pub fn render_polygon_fill_tsp(
     return render_tsp(data, candidates, duration);
 }
 
-pub fn render_fill_spiral(
-    data: Data,
-    candidates: Vec<(f64, f64)>,
-) -> Data {
+pub fn route_spiral(candidates: Vec<(f64,f64)>) -> Vec<(f64,f64)> {
     if candidates.len() == 0 {
-        return data;
+        return candidates;
     }
     let mut result = Vec::new();
     let mut list = candidates.clone();
@@ -293,6 +290,14 @@ pub fn render_fill_spiral(
             break;
         }
     }
+    result
+}
+
+pub fn render_fill_spiral(
+    data: Data,
+    candidates: Vec<(f64, f64)>,
+) -> Data {
+    let result = route_spiral(candidates);
     return render_route(data, result);
 }
 
