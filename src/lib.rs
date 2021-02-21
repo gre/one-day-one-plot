@@ -45,6 +45,11 @@ pub fn rgb_to_cmyk(
     return (c, m, y, k);
 }
 
+pub fn rgb_to_cmyk_vec(c: (f64, f64, f64)) -> Vec<f64> {
+    let (c, m, y, k) = rgb_to_cmyk(c);
+    vec![c, m, y, k]
+}
+
 // point is normalized in 0..1
 // returned value is a rgb tuple in 0..1 range
 pub fn image_get_color(
@@ -109,6 +114,16 @@ pub fn base_path(
         .set("stroke", color)
         .set("stroke-width", stroke_width)
         .set("d", data)
+}
+
+pub fn project_in_boundaries(
+    p: (f64, f64),
+    boundaries: (f64, f64, f64, f64),
+) -> (f64, f64) {
+    (
+        p.0 * (boundaries.2 - boundaries.0) + boundaries.0,
+        p.1 * (boundaries.3 - boundaries.1) + boundaries.1,
+    )
 }
 
 pub fn normalize_in_boundaries(
@@ -259,7 +274,9 @@ pub fn render_polygon_fill_tsp(
     return render_tsp(data, candidates, duration);
 }
 
-pub fn route_spiral(candidates: Vec<(f64,f64)>) -> Vec<(f64,f64)> {
+pub fn route_spiral(
+    candidates: Vec<(f64, f64)>,
+) -> Vec<(f64, f64)> {
     if candidates.len() == 0 {
         return candidates;
     }
