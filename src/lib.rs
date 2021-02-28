@@ -149,6 +149,16 @@ pub fn out_of_boundaries(
         || p.1 > boundaries.3
 }
 
+pub fn strictly_in_boundaries(
+    p: (f64, f64),
+    boundaries: (f64, f64, f64, f64),
+) -> bool {
+    p.0 > boundaries.0
+        && p.0 < boundaries.2
+        && p.1 > boundaries.1
+        && p.1 < boundaries.3
+}
+
 pub fn render_polygon_stroke(
     data: Data,
     poly: Polygon<f64>,
@@ -585,6 +595,59 @@ pub fn collide_route_segment(
     return None;
 }
 
+pub fn collide_segment_boundaries(
+    from: (f64, f64),
+    to: (f64, f64),
+    boundaries: (f64, f64, f64, f64),
+) -> Option<(f64, f64)> {
+    if strictly_in_boundaries(from, boundaries)
+        && strictly_in_boundaries(to, boundaries)
+    {
+        return None;
+    }
+    let segment =
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: from.into(),
+                end: to.into(),
+            },
+        );
+    vec![
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: (boundaries.0, boundaries.1).into(),
+                end: (boundaries.2, boundaries.1).into(),
+            },
+        ),
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: (boundaries.0, boundaries.1).into(),
+                end: (boundaries.0, boundaries.3).into(),
+            },
+        ),
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: (boundaries.2, boundaries.1).into(),
+                end: (boundaries.2, boundaries.3).into(),
+            },
+        ),
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: (boundaries.0, boundaries.3).into(),
+                end: (boundaries.2, boundaries.3).into(),
+            },
+        ),
+    ]
+    .iter()
+    .find_map(|edge| {
+        segment
+            .relate(edge)
+            .unique_intersection()
+            .map(|p| p.x_y())
+    })
+}
+
+/*
 // collide routes: make a route stop as soon as it collides another
 
 // sequential: means the routes are ordered by priority.
@@ -670,6 +733,81 @@ pub fn collide_routes_parallel(
 
     return acc;
 }
+*/
 
-// TODO crop routes in boundaries
+pub fn build_routes_with_collision_par(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    build_route: &dyn Fn(
+        // last position
+        (f64, f64),
+        // index of the route position to build
+        usize,
+        // index of the route in routes
+        usize,
+    ) -> Option<((f64, f64), bool)>,
+) -> Vec<Vec<(f64, f64)>> {
+    let len = initial_positions.len();
+    let mut acc = Vec::new();
+    let mut finished = Vec::new();
+    for origin in initial_positions {
+        let mut v: Vec<(f64, f64)> = Vec::new();
+        v.push(origin);
+        acc.push(v);
+        finished.push(false);
+    }
+
+    let mut i = 1;
+    loop {
+        let mut continues = false;
+        for j in 0..len {
+            if finished[j] {
+                continue;
+            }
+            let cur = acc[j][i - 1];
+            if let Some((next, ends)) =
+                build_route(cur, i, j)
+            {
+                let collision = acc
+                    .iter()
+                    .enumerate()
+                    .find_map(|(k, r)| {
+                        if k == j {
+                            None
+                        } else {
+                            collide_route_segment(
+                                r, cur, next,
+                            )
+                        }
+                    });
+                if let Some(point) = collision {
+                    acc[j].push(point);
+                    finished[j] = true;
+                } else if ends {
+                    acc[j].push(next);
+                    finished[j] = true;
+                } else {
+                    continues = true;
+                    acc[j].push(next);
+                }
+            } else {
+                finished[j] = true;
+            }
+        }
+        if !continues {
+            break;
+        }
+        i += 1;
+    }
+
+    acc = acc
+        .iter()
+        .filter(|r| r.len() > 1)
+        .map(|r| r.clone())
+        .collect();
+
+    return acc;
+}
+
 // TODO remove a polygon shape on a route
