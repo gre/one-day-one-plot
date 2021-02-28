@@ -10,18 +10,18 @@ type ConfRoute = Vec<(Conf, Vec<(f64, f64)>)>;
 fn art(seconds: i64) -> Vec<Group> {
     let passes = 2;
     let samples_count = 4000;
-    let kmeans_clusters = 16;
+    let kmeans_clusters = 20;
     let get_color =
         image_get_color("images/moon.jpg").unwrap();
 
     let mut groups = Vec::new();
 
     let configs: Vec<Conf> = vec![
-        ("white", (1.0, 1.0, 1.0), 1.0),
-        ("gold", (1.0, 0.6, 0.0), 0.8),
+        ("white", (0.9, 0.9, 0.9), 0.9),
+        ("orange", (0.7, 0.4, 0.1), 0.4),
     ];
 
-    let bounds = (50.0, 10.0, 250.0, 200.0);
+    let bounds = (40.0, 0.0, 260.0, 210.0);
 
     let routes: Vec<(Conf, Vec<(f64, f64)>)> = configs
         .par_iter()
@@ -36,7 +36,7 @@ fn art(seconds: i64) -> Vec<Group> {
                         let dr = cr - r;
                         let dg = cg - g;
                         let db = cb - b;
-                        0.5 * smoothstep(
+                        0.7 * smoothstep(
                             config.2,
                             0.0,
                             (dr * dr + dg * dg + db * db)

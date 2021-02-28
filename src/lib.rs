@@ -1,6 +1,7 @@
 use geo::*;
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
+use ndarray::Array2;
 use prelude::{BoundingRect, Contains};
 use rand::prelude::*;
 use std::f64::consts::PI;
@@ -352,11 +353,11 @@ pub fn sample_2d_candidates(
 }
 
 // f returns a value from 0.0 to 1.0. if 0 the point is not considered, if 1 it's always taken in samples candidate. otherwise it's randomly filtered
-pub fn sample_2d_candidates_f64(
+pub fn sample_2d_candidates_f64<R: Rng>(
     f: &dyn Fn((f64, f64)) -> f64,
     dim: usize,
     samples: usize,
-    rng: &mut SmallRng,
+    rng: &mut R,
 ) -> Vec<(f64, f64)> {
     let mut candidates = Vec::new();
     for x in 0..dim {
@@ -468,3 +469,207 @@ pub fn group_by_proximity(
 
     return groups;
 }
+
+pub fn render_route_curve(
+    data: Data,
+    route: Vec<(f64, f64)>,
+) -> Data {
+    let mut first = true;
+    let mut d = data;
+    let mut last = route[0];
+    for p in route {
+        if first {
+            first = false;
+            d = d.move_to(p);
+        } else {
+            d = d.quadratic_curve_to((
+                last.0,
+                last.1,
+                (p.0 + last.0) / 2.,
+                (p.1 + last.1) / 2.,
+            ));
+        }
+        last = p;
+    }
+    return d;
+}
+
+pub fn group_with_kmeans(
+    samples: Vec<(f64, f64)>,
+    n: usize,
+) -> Vec<Vec<(f64, f64)>> {
+    let arr = Array2::from_shape_vec(
+        (samples.len(), 2),
+        samples
+            .iter()
+            .flat_map(|&(x, y)| vec![x, y])
+            .collect(),
+    )
+    .unwrap();
+
+    let (means, clusters) =
+        rkm::kmeans_lloyd(&arr.view(), n);
+
+    let all: Vec<Vec<(f64, f64)>> = means
+        .outer_iter()
+        .enumerate()
+        .map(|(c, _coord)| {
+            clusters
+                .iter()
+                .enumerate()
+                .filter(|(_i, &cluster)| cluster == c)
+                .map(|(i, _c)| samples[i])
+                .collect()
+        })
+        .collect();
+
+    all
+}
+
+pub fn round_point(
+    (x, y): (f64, f64),
+    precision: f64,
+) -> (f64, f64) {
+    (
+        (x / precision).round() * precision,
+        (y / precision).round() * precision,
+    )
+}
+
+pub fn round_route(
+    route: Vec<(f64, f64)>,
+    precision: f64,
+) -> Vec<(f64, f64)> {
+    route
+        .iter()
+        .map(|&p| round_point(p, precision))
+        .collect()
+}
+
+pub fn follow_angle(
+    o: (f64, f64),
+    a: f64,
+    amp: f64,
+) -> (f64, f64) {
+    (o.0 + amp * a.cos(), o.1 + amp * a.sin())
+}
+
+pub fn collide_route_segment(
+    route: &Vec<(f64, f64)>,
+    from: (f64, f64),
+    to: (f64, f64),
+) -> Option<(f64, f64)> {
+    // TODO: things could be way more performant with a quad tree
+    let segment =
+        line_intersection::LineInterval::line_segment(
+            Line {
+                start: to.into(),
+                end: from.into(),
+            },
+        );
+    let mut last = route[0];
+    for i in 1..route.len() {
+        let p = route[i];
+        let intersection = segment
+            .relate(&line_intersection::LineInterval::line_segment(Line {
+                start: p.into(),
+                end: last.into(),
+            }))
+            .unique_intersection()
+            .map(|p| p.x_y());
+        if intersection.is_some() {
+            return intersection;
+        }
+        last = p;
+    }
+    return None;
+}
+
+// collide routes: make a route stop as soon as it collides another
+
+// sequential: means the routes are ordered by priority.
+// we do one route after the other in the routes order.
+pub fn collide_routes_sequential(
+    routes: Vec<Vec<(f64, f64)>>,
+) -> Vec<Vec<(f64, f64)>> {
+    let mut acc = Vec::new();
+    for route in routes {
+        let mut copy = Vec::new();
+        let mut cur = route[0];
+        copy.push(cur);
+        for &next in route.iter().skip(1) {
+            let collision = acc.iter().find_map(|r| {
+                collide_route_segment(r, cur, next)
+            });
+            if let Some(point) = collision {
+                copy.push(point);
+                break;
+            }
+            cur = next;
+            copy.push(next);
+        }
+        if copy.len() > 1 {
+            acc.push(copy);
+        }
+    }
+    acc
+}
+
+// parallel: means the routes are going to be equally considered but their "length" determines the priority.
+// we give equal chance to all routes (they progress at the same time)
+pub fn collide_routes_parallel(
+    routes: Vec<Vec<(f64, f64)>>,
+) -> Vec<Vec<(f64, f64)>> {
+    let mut acc = Vec::new();
+    let mut finished = Vec::new();
+    for route in routes.iter() {
+        let mut v: Vec<(f64, f64)> = Vec::new();
+        v.push(route[0]);
+        acc.push(v);
+        finished.push(false);
+    }
+
+    let mut i = 1;
+    loop {
+        let mut continues = false;
+        for (j, route) in routes.iter().enumerate() {
+            if route.len() <= i || finished[j] {
+                continue;
+            }
+            let cur = acc[j][i - 1];
+            let next = route[i];
+            let collision = acc
+                .iter()
+                .enumerate()
+                .find_map(|(k, r)| {
+                    if k == j {
+                        None
+                    } else {
+                        collide_route_segment(r, cur, next)
+                    }
+                });
+            if let Some(point) = collision {
+                acc[j].push(point);
+                finished[j] = true;
+            } else {
+                continues = true;
+                acc[j].push(next);
+            }
+        }
+        if !continues {
+            break;
+        }
+        i += 1;
+    }
+
+    acc = acc
+        .iter()
+        .filter(|r| r.len() > 1)
+        .map(|r| r.clone())
+        .collect();
+
+    return acc;
+}
+
+// TODO crop routes in boundaries
+// TODO remove a polygon shape on a route

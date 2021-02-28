@@ -38,7 +38,9 @@ pub enum LineRelation {
 impl LineRelation {
     pub fn unique_intersection(self) -> Option<Point<f64>> {
         match self {
-            LineRelation::DivergentIntersecting(p) => Some(p),
+            LineRelation::DivergentIntersecting(p) => {
+                Some(p)
+            }
             _ => None,
         }
     }
@@ -55,19 +57,28 @@ impl LineInterval {
     pub fn ray(line: Line<f64>) -> LineInterval {
         LineInterval {
             line: line,
-            interval_of_intersection: (0.0, f64::infinity()),
+            interval_of_intersection: (
+                0.0,
+                f64::infinity(),
+            ),
         }
     }
 
     pub fn line(line: Line<f64>) -> LineInterval {
         LineInterval {
             line: line,
-            interval_of_intersection: (f64::neg_infinity(), f64::infinity()),
+            interval_of_intersection: (
+                f64::neg_infinity(),
+                f64::infinity(),
+            ),
         }
     }
 
     /// Get the relationship between this line segment and another.
-    pub fn relate(&self, other: &LineInterval) -> LineRelation {
+    pub fn relate(
+        &self,
+        other: &LineInterval,
+    ) -> LineRelation {
         // see https://stackoverflow.com/a/565282
         let p = self.line.start_point();
         let q = other.line.start_point();
@@ -90,18 +101,30 @@ impl LineInterval {
             }
         } else {
             // the lines are not parallel
-            let t = Self::cross(&q_minus_p, &Self::div(&s, r_cross_s));
-            let u = Self::cross(&q_minus_p, &Self::div(&r, r_cross_s));
+            let t = Self::cross(
+                &q_minus_p,
+                &Self::div(&s, r_cross_s),
+            );
+            let u = Self::cross(
+                &q_minus_p,
+                &Self::div(&r, r_cross_s),
+            );
 
             // are the intersection coordinates both in range?
             let t_in_range =
-                self.interval_of_intersection.0 <= t && t <= self.interval_of_intersection.1;
-            let u_in_range =
-                other.interval_of_intersection.0 <= u && u <= other.interval_of_intersection.1;
+                self.interval_of_intersection.0 <= t
+                    && t <= self.interval_of_intersection.1;
+            let u_in_range = other
+                .interval_of_intersection
+                .0
+                <= u
+                && u <= other.interval_of_intersection.1;
 
             if t_in_range && u_in_range {
                 // there is an intersection
-                LineRelation::DivergentIntersecting(Self::t_coord_to_point(&p, &r, t))
+                LineRelation::DivergentIntersecting(
+                    Self::t_coord_to_point(&p, &r, t),
+                )
             } else {
                 // there is no intersection
                 LineRelation::DivergentDisjoint
@@ -117,7 +140,11 @@ impl LineInterval {
         (a.x() / b, a.y() / b).into()
     }
 
-    fn t_coord_to_point(p: &Point<f64>, r: &Point<f64>, t: f64) -> Point<f64> {
+    fn t_coord_to_point(
+        p: &Point<f64>,
+        r: &Point<f64>,
+        t: f64,
+    ) -> Point<f64> {
         (p.x() + t * r.x(), p.y() + t * r.y()).into()
     }
 }
