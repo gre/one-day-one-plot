@@ -6,28 +6,50 @@ use svg::node::element::*;
 
 fn parametric(p: f64) -> (f64, f64) {
     (
-        0.5 * (2. * PI * p).cos()
-            + 0.8 * (8. * PI * p).sin(),
-        0.5 * (2. * PI * p).sin()
-            + 0.8 * (8. * PI * p).cos(),
+        0.8 * (8. * PI * p).cos()
+            + 0.1 * (4. * PI * p).sin()
+            + 0.4 * (6. * PI * p).cos(),
+        0.8 * (8. * PI * p).sin()
+            + 0.2 * (6. * PI * p).cos()
+            + 0.5 * (4. * PI * p).sin(),
     )
 }
 
 fn art(seed: f64) -> Vec<Group> {
-    let colors = vec!["black"];
-    let pad = 20.0;
+    let colors = vec!["hotpink"];
+    let pad = 10.0;
     let width = 210.0;
-    let height = 210.0;
+    let height = 297.0;
     let size = 60.0;
     let bounds = (pad, pad, width - pad, height - pad);
 
-    let line_length = 200.0;
-    let granularity = 1.0;
+    let line_length = 100.0;
+    let granularity = 0.5;
     let samples = 1000;
 
     let perlin = Perlin::new();
     let get_angle = |(x, y), initial_angle, length| {
-        initial_angle - 0.4 - 0.01 * length
+        initial_angle
+            + (2.
+                + 20.
+                    * (0.8
+                        - euclidian_dist(
+                            (x, y),
+                            (width / 2., height / 2.),
+                        ) / width)
+                        .max(0.0)
+                + (3.
+                    * perlin.get([
+                        0.02 * x,
+                        0.02 * y,
+                        seed,
+                    ])
+                    + 1. * perlin.get([
+                        0.08 * x,
+                        0.08 * y,
+                        seed,
+                    ])))
+                * (0.1 + length / line_length)
     };
 
     let samples_data: Vec<(f64, (f64, f64))> = (0..samples)
@@ -65,26 +87,10 @@ fn art(seed: f64) -> Vec<Group> {
         return Some((nextp, false));
     };
 
-    let mut routes =
-    // lines
-    build_routes_with_collision_par(
+    let routes = build_routes_with_collision_par(
         initial_positions,
         &build_route,
     );
-
-    // parametric curve itself
-    routes.push(
-        samples_data.iter().map(|&(_a, p)| p).collect(),
-    );
-
-    // frame
-    routes.push(vec![
-        (pad, pad),
-        (width - pad, pad),
-        (width - pad, height - pad),
-        (pad, height - pad),
-        (pad, pad),
-    ]);
 
     colors
         .iter()
@@ -99,16 +105,14 @@ fn art(seed: f64) -> Vec<Group> {
                 });
 
             let mut g = layer(color);
-            g = g.add(base_path(color, 0.2, data));
-            /*
+            g = g.add(base_path(color, 0.3, data));
             if i == colors.len() - 1 {
                 g = g.add(signature(
                     1.0,
-                    (252.0, 190.0),
+                    (170.0, 230.0),
                     color,
                 ))
             }
-            */
             return g;
         })
         .collect()
@@ -120,15 +124,7 @@ fn main() {
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
     let groups = art(seed);
-    let mut document = svg::Document::new()
-        .set(
-            "xmlns:inkscape",
-            "http://www.inkscape.org/namespaces/inkscape",
-        )
-        .set("viewBox", (0, 0, 210, 210))
-        .set("width", "210mm")
-        .set("height", "210mm")
-        .set("style", format!("background:{}", "white"));
+    let mut document = base_a4_portrait("black");
     for g in groups {
         document = document.add(g);
     }

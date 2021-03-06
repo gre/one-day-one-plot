@@ -735,6 +735,114 @@ pub fn collide_routes_parallel(
 }
 */
 
+pub fn build_routes(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    build_route: &dyn Fn(
+        // last position
+        (f64, f64),
+        // index of the route position to build
+        usize,
+        // index of the route in routes
+        usize,
+    ) -> Option<((f64, f64), bool)>,
+) -> Vec<Vec<(f64, f64)>> {
+    let mut acc = Vec::new();
+    for (j, &origin) in initial_positions.iter().enumerate()
+    {
+        let mut v: Vec<(f64, f64)> = Vec::new();
+        v.push(origin);
+        let mut i = 1;
+        let mut cur = origin;
+        loop {
+            if let Some((next, ends)) =
+                build_route(cur, i, j)
+            {
+                if ends {
+                    v.push(next);
+                    break;
+                } else {
+                    v.push(next);
+                }
+                i += 1;
+                cur = next;
+            } else {
+                break;
+            }
+        }
+        acc.push(v);
+    }
+    acc = acc
+        .iter()
+        .filter(|r| r.len() > 1)
+        .map(|r| r.clone())
+        .collect();
+    acc
+}
+
+pub fn build_routes_with_collision_seq(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    build_route: &dyn Fn(
+        // last position
+        (f64, f64),
+        // index of the route position to build
+        usize,
+        // index of the route in routes
+        usize,
+    ) -> Option<((f64, f64), bool)>,
+) -> Vec<Vec<(f64, f64)>> {
+    let mut acc = Vec::new();
+    for (j, &origin) in initial_positions.iter().enumerate()
+    {
+        let mut v: Vec<(f64, f64)> = Vec::new();
+        v.push(origin);
+        let mut i = 1;
+        let mut cur = origin;
+        loop {
+            if let Some((next, ends)) =
+                build_route(cur, i, j)
+            {
+                let collision = acc
+                    .iter()
+                    .enumerate()
+                    .find_map(|(k, r)| {
+                        if k == j {
+                            None
+                        } else {
+                            collide_route_segment(
+                                r, cur, next,
+                            )
+                        }
+                    });
+                if let Some(point) = collision {
+                    v.push(point);
+                    break;
+                } else if ends {
+                    v.push(next);
+                    break;
+                } else {
+                    v.push(next);
+                }
+
+                i += 1;
+                cur = next;
+            } else {
+                break;
+            }
+        }
+        acc.push(v);
+    }
+    acc = acc
+        .iter()
+        .filter(|r| r.len() > 1)
+        .map(|r| r.clone())
+        .collect();
+    acc
+}
+
 pub fn build_routes_with_collision_par(
     initial_positions: Vec<(f64, f64)>,
     // returns None if there is no point to build anymore

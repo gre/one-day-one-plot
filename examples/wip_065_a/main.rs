@@ -16,7 +16,7 @@ fn parametric(p: f64) -> (f64, f64) {
 fn art(seed: f64) -> Vec<Group> {
     let colors = vec!["black"];
     let pad = 20.0;
-    let width = 210.0;
+    let width = 297.0;
     let height = 210.0;
     let size = 60.0;
     let bounds = (pad, pad, width - pad, height - pad);
@@ -100,7 +100,6 @@ fn art(seed: f64) -> Vec<Group> {
 
             let mut g = layer(color);
             g = g.add(base_path(color, 0.2, data));
-            /*
             if i == colors.len() - 1 {
                 g = g.add(signature(
                     1.0,
@@ -108,7 +107,6 @@ fn art(seed: f64) -> Vec<Group> {
                     color,
                 ))
             }
-            */
             return g;
         })
         .collect()
@@ -120,15 +118,7 @@ fn main() {
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
     let groups = art(seed);
-    let mut document = svg::Document::new()
-        .set(
-            "xmlns:inkscape",
-            "http://www.inkscape.org/namespaces/inkscape",
-        )
-        .set("viewBox", (0, 0, 210, 210))
-        .set("width", "210mm")
-        .set("height", "210mm")
-        .set("style", format!("background:{}", "white"));
+    let mut document = base_a4_landscape("white");
     for g in groups {
         document = document.add(g);
     }

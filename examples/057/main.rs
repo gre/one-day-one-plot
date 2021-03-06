@@ -19,14 +19,13 @@ fn art() -> Vec<Group> {
     ]);
 
     let get_color =
-        image_get_color("images/monalisa.jpg").unwrap();
+        image_get_color("/Users/grenaudeau/Desktop/theo.jpg").unwrap();
 
     let mut data = Data::new();
     let scales = vec![
-        (21, 28, 1.5, 20),
-        (30, 40, 2., 20),
-        (50, 73, 2.5, 30),
-        (83, 110, 4., 50),
+        (21, 28, 1.5, 16),
+        (30, 40, 2., 24),
+        (50, 73, 2.5, 32),
     ];
     for (w, h, p, max_samples) in scales {
         for x in 0..w {
@@ -47,7 +46,7 @@ fn art() -> Vec<Group> {
                         &|p| {
                             1. - grayscale(get_color(
                                 map_p(p),
-                            ))
+                            )).powf(2.0)
                         },
                         res,
                         (max_samples as f64 * g) as usize,
@@ -70,7 +69,7 @@ fn art() -> Vec<Group> {
     }
 
     vec![Group::new().add(
-        layer("blue").add(base_path("blue", 0.2, data)),
+        layer("black").add(base_path("black", 0.2, data)),
     )]
 }
 
