@@ -5,6 +5,23 @@ use rayon::prelude::*;
 use svg::node::element::path::Data;
 use svg::node::element::*;
 
+// https://docs.rs/svg/0.8.0/svg/
+
+fn mandelbrot(init: (f64, f64)) -> f64 {
+    let mut p = init;
+    let it = 500;
+    for i in 0..it {
+        p = (
+            init.0 + p.0 * p.0 - p.1 * p.1,
+            init.1 + 2.0 * p.0 * p.1,
+        );
+        if p.0 * p.0 + p.1 * p.1 >= 4.0 {
+            return (i as f64) / (it as f64);
+        }
+    }
+    return 1.0;
+}
+
 pub fn render_route_curve(
     data: Data,
     route: Vec<(f64, f64)>,
@@ -30,15 +47,12 @@ pub fn render_route_curve(
 }
 
 fn art(
-    path: &str,
     seed0: u8,
     seconds: i64,
     clouds_count: usize,
     cloud_size: usize,
     cloud_clusters: usize,
 ) -> Vec<Group> {
-    let get_color = image_get_color(path).unwrap();
-
     let clouds: Vec<Vec<(f64, f64)>> = (0..clouds_count)
         .into_par_iter()
         .flat_map(|i| {
@@ -48,14 +62,29 @@ fn art(
             ]);
 
             let samples = sample_2d_candidates_f64(
-                &|p| {
-                    0.1 * smoothstep(
-                        0.4,
-                        0.0,
-                        grayscale(get_color(p)),
-                    )
+                &|(x, y)| {
+                    let f = if i == 0 {
+                        x
+                    } else if i == 1 {
+                        1. - x
+                    } else {
+                        1.
+                    };
+
+                    (0.1 * f
+                        * ((mandelbrot((
+                            2.5 * (x - 0.8),
+                            2.5 * (y - 0.5),
+                        )) - 0.1)
+                            .max(0.0)
+                            .powf(0.5)
+                            - mandelbrot((
+                                5.0 * (x - 0.8),
+                                5.0 * (y - 0.5),
+                            ))))
+                    .max(0.0)
                 },
-                400,
+                600,
                 cloud_size,
                 &mut rng,
             );
@@ -129,30 +158,27 @@ fn art(
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let default_path = String::from("images/man_jump.jpg");
-    let path = args.get(1).unwrap_or(&default_path);
     let seed = args
-        .get(2)
+        .get(1)
         .and_then(|s| s.parse::<u8>().ok())
         .unwrap_or(0);
     let seconds = args
-        .get(3)
+        .get(2)
         .and_then(|s| s.parse::<i64>().ok())
         .unwrap_or(0);
     let clouds_count = args
-        .get(4)
+        .get(3)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(3);
     let cloud_size = args
-        .get(5)
+        .get(4)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(5000);
     let cloud_cluster = args
-        .get(6)
+        .get(5)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(50);
     let groups = art(
-        path,
         seed,
         seconds,
         clouds_count,
@@ -165,7 +191,7 @@ fn main() {
     }
     document = document.add(signature(
         1.0,
-        (185.0, 160.0),
+        (240.0, 160.0),
         "black",
     ));
     svg::save("image.svg", &document).unwrap();
