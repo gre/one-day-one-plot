@@ -63,21 +63,12 @@ fn art(
 
             let samples = sample_2d_candidates_f64(
                 &|(x, y)| {
-                    let f = if i == 0 {
-                        x
-                    } else if i == 1 {
-                        1. - x
-                    } else {
-                        1.
-                    };
-
-                    (0.1 * f
+                    (0.05
                         * ((mandelbrot((
                             2.5 * (x - 0.8),
                             2.5 * (y - 0.5),
                         )) - 0.1)
                             .max(0.0)
-                            .powf(0.5)
                             - mandelbrot((
                                 5.0 * (x - 0.8),
                                 5.0 * (y - 0.5),
@@ -169,15 +160,15 @@ fn main() {
     let clouds_count = args
         .get(3)
         .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(3);
+        .unwrap_or(4);
     let cloud_size = args
         .get(4)
         .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(5000);
+        .unwrap_or(2000);
     let cloud_cluster = args
         .get(5)
         .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(50);
+        .unwrap_or(60);
     let groups = art(
         seed,
         seconds,
