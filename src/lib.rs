@@ -51,6 +51,24 @@ pub fn rgb_to_cmyk_vec(c: (f64, f64, f64)) -> Vec<f64> {
     vec![c, m, y, k]
 }
 
+pub fn preserve_ratio_inside(
+    (x, y): (f64, f64),
+    (w, h): (f64, f64),
+) -> (f64, f64) {
+    let m = w.min(h);
+    let ratio = (w / m, h / m);
+    (0.5 + (x - 0.5) * ratio.0, 0.5 + (y - 0.5) * ratio.1)
+}
+
+pub fn preserve_ratio_outside(
+    (x, y): (f64, f64),
+    (w, h): (f64, f64),
+) -> (f64, f64) {
+    let m = w.max(h);
+    let ratio = (w / m, h / m);
+    (0.5 + (x - 0.5) * ratio.0, 0.5 + (y - 0.5) * ratio.1)
+}
+
 // point is normalized in 0..1
 // returned value is a rgb tuple in 0..1 range
 pub fn image_get_color(
@@ -746,6 +764,7 @@ pub fn build_routes(
         usize,
         // index of the route in routes
         usize,
+        // next point and bool to tell if it finishes
     ) -> Option<((f64, f64), bool)>,
 ) -> Vec<Vec<(f64, f64)>> {
     let mut acc = Vec::new();
