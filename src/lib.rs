@@ -4,7 +4,7 @@ use image::GenericImageView;
 use ndarray::Array2;
 use prelude::{BoundingRect, Contains};
 use rand::prelude::*;
-use std::f64::consts::PI;
+use std::f64::{consts::PI, INFINITY};
 use svg::node::element::path::Data;
 use svg::node::element::{Circle, Group, Path};
 use svg::Document;
@@ -426,6 +426,18 @@ pub fn heart_distance(p: (f64, f64)) -> f64 {
     x * x + y * y - 10.0
 }
 
+pub fn boundaries_route(
+    boundaries: (f64, f64, f64, f64),
+) -> Vec<(f64, f64)> {
+    vec![
+        (boundaries.0, boundaries.1),
+        (boundaries.2, boundaries.1),
+        (boundaries.2, boundaries.3),
+        (boundaries.0, boundaries.3),
+        (boundaries.0, boundaries.1),
+    ]
+}
+
 // get in mm the side length of the bounding square that contains the polygon
 pub fn poly_bounding_square_edge(
     poly: &Polygon<f64>,
@@ -582,35 +594,100 @@ pub fn follow_angle(
     (o.0 + amp * a.cos(), o.1 + amp * a.sin())
 }
 
+/// Get the relationship between this line segment and another.
+pub fn collides_segment(
+    from_1: (f64, f64),
+    to_1: (f64, f64),
+    from_2: (f64, f64),
+    to_2: (f64, f64),
+) -> Option<(f64, f64)> {
+    // see https://stackoverflow.com/a/565282
+    let p = from_1;
+    let q = from_2;
+    let r = (to_1.0 - p.0, to_1.1 - p.1);
+    let s = (to_2.0 - q.0, to_2.1 - q.1);
+
+    let r_cross_s = cross(r, s);
+    let q_minus_p = (q.0 - p.0, q.1 - p.1);
+    let q_minus_p_cross_r = cross(q_minus_p, r);
+
+    // are the lines are parallel?
+    if r_cross_s == 0.0 {
+        // are the lines collinear?
+        if q_minus_p_cross_r == 0.0 {
+            // the lines are collinear
+            None
+        } else {
+            // the lines are parallel but not collinear
+            None
+        }
+    } else {
+        // the lines are not parallel
+        let t = cross(q_minus_p, div(s, r_cross_s));
+        let u = cross(q_minus_p, div(r, r_cross_s));
+
+        // are the intersection coordinates both in range?
+        let t_in_range = 0.0 <= t && t <= 1.0;
+        let u_in_range = 0.0 <= u && u <= 1.0;
+
+        if t_in_range && u_in_range {
+            // there is an intersection
+            Some((p.0 + t * r.0, p.1 + t * r.1))
+        } else {
+            // there is no intersection
+            None
+        }
+    }
+}
+
+fn cross(a: (f64, f64), b: (f64, f64)) -> f64 {
+    a.0 * b.1 - a.1 * b.0
+}
+
+fn div(a: (f64, f64), b: f64) -> (f64, f64) {
+    (a.0 / b, a.1 / b)
+}
+
+// assume the collision is on 1D (same line) so we can just do logic on one dimension
+pub fn find_best_collision_1d(
+    from: (f64, f64),
+    others: Vec<(f64, f64)>,
+) -> Option<(f64, f64)> {
+    let mut best_dx = INFINITY;
+    let mut best_intersection = None;
+    for q in others {
+        let dx = (q.0 - from.0).abs();
+        if dx < best_dx {
+            best_intersection = Some(q);
+            best_dx = dx;
+        }
+    }
+    return best_intersection;
+}
+
 pub fn collide_route_segment(
     route: &Vec<(f64, f64)>,
     from: (f64, f64),
     to: (f64, f64),
 ) -> Option<(f64, f64)> {
     // TODO: things could be way more performant with a quad tree
-    let segment =
-        line_intersection::LineInterval::line_segment(
-            Line {
-                start: to.into(),
-                end: from.into(),
-            },
-        );
     let mut last = route[0];
+    let mut best_dx = INFINITY;
+    let mut best_intersection = None;
     for i in 1..route.len() {
         let p = route[i];
-        let intersection = segment
-            .relate(&line_intersection::LineInterval::line_segment(Line {
-                start: p.into(),
-                end: last.into(),
-            }))
-            .unique_intersection()
-            .map(|p| p.x_y());
-        if intersection.is_some() {
-            return intersection;
+        let intersection =
+            collides_segment(from, to, last, p);
+        if let Some(q) = intersection {
+            let dx = (q.0 - from.0).abs();
+            if dx < best_dx {
+                best_intersection = intersection;
+                best_dx = dx;
+            }
         }
         last = p;
     }
-    return None;
+    return best_intersection;
 }
 
 pub fn collide_segment_boundaries(
@@ -824,18 +901,21 @@ pub fn build_routes_with_collision_seq(
             if let Some((next, ends)) =
                 build_route(cur, i, j)
             {
-                let collision = acc
-                    .iter()
-                    .enumerate()
-                    .find_map(|(k, r)| {
-                        if k == j {
-                            None
-                        } else {
-                            collide_route_segment(
-                                r, cur, next,
-                            )
-                        }
-                    });
+                let collision = find_best_collision_1d(
+                    cur,
+                    acc.iter()
+                        .enumerate()
+                        .filter_map(|(k, r)| {
+                            if k == j {
+                                None
+                            } else {
+                                collide_route_segment(
+                                    r, cur, next,
+                                )
+                            }
+                        })
+                        .collect(),
+                );
                 if let Some(point) = collision {
                     v.push(point);
                     break;
@@ -896,18 +976,21 @@ pub fn build_routes_with_collision_par(
             if let Some((next, ends)) =
                 build_route(cur, i, j)
             {
-                let collision = acc
-                    .iter()
-                    .enumerate()
-                    .find_map(|(k, r)| {
-                        if k == j {
-                            None
-                        } else {
-                            collide_route_segment(
-                                r, cur, next,
-                            )
-                        }
-                    });
+                let collision = find_best_collision_1d(
+                    cur,
+                    acc.iter()
+                        .enumerate()
+                        .filter_map(|(k, r)| {
+                            if k == j {
+                                None
+                            } else {
+                                collide_route_segment(
+                                    r, cur, next,
+                                )
+                            }
+                        })
+                        .collect(),
+                );
                 if let Some(point) = collision {
                     acc[j].push(point);
                     finished[j] = true;

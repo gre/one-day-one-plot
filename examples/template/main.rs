@@ -1,32 +1,46 @@
+use clap::Clap;
 use gre::*;
 use noise::*;
 use svg::node::element::path::Data;
 use svg::node::element::*;
 
-fn art(_seed: f64) -> Vec<Group> {
-    let mut groups = Vec::new();
+fn art(opts: Opts) -> Vec<Group> {
+    let colors = vec!["black"];
+    colors
+        .iter()
+        .enumerate()
+        .map(|(i, color)| {
+            let mut data = Data::new();
 
-    let mut data = Data::new();
+            data = data.move_to((0., 0.));
 
-    data = data.move_to((0., 0.));
+            let mut l = layer(color);
+            l = l.add(base_path(color, 0.2, data));
+            if i == colors.len() - 1 {
+                l = l.add(signature(
+                    1.0,
+                    (260.0, 190.0),
+                    color,
+                ));
+            }
+            l
+        })
+        .collect()
+}
 
-    let color = "black";
-    groups.push(layer(color).add(base_path(color, 0.2, data)));
-
-    groups
+#[derive(Clap)]
+#[clap()]
+struct Opts {
+    #[clap(short, long, default_value = "0.0")]
+    seed: f64,
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let seed = args
-        .get(1)
-        .and_then(|s| s.parse::<f64>().ok())
-        .unwrap_or(0.0);
-    let groups = art(seed);
+    let opts: Opts = Opts::parse();
+    let groups = art(opts);
     let mut document = base_a4_landscape("white");
     for g in groups {
         document = document.add(g);
     }
-    document = document.add(signature(1.0, (260.0, 190.0), "black"));
     svg::save("image.svg", &document).unwrap();
 }
