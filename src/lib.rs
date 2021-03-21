@@ -123,6 +123,16 @@ pub fn base_a4_landscape(bg: &str) -> Document {
         .set("style", format!("background:{}", bg))
 }
 
+pub fn euclidian_rgb_distance(
+    a: (f64, f64, f64),
+    b: (f64, f64, f64),
+) -> f64 {
+    let r = a.0 - b.0;
+    let g = a.1 - b.1;
+    let b = a.2 - b.2;
+    (r * r + g * g + b * b).sqrt()
+}
+
 pub fn base_path(
     color: &str,
     stroke_width: f64,
@@ -830,19 +840,20 @@ pub fn collide_routes_parallel(
 }
 */
 
-pub fn build_routes(
-    initial_positions: Vec<(f64, f64)>,
-    // returns None if there is no point to build anymore
-    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
-    build_route: &dyn Fn(
+pub fn build_routes<
+    F: FnMut(
         // last position
         (f64, f64),
         // index of the route position to build
         usize,
         // index of the route in routes
         usize,
-        // next point and bool to tell if it finishes
     ) -> Option<((f64, f64), bool)>,
+>(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    mut build_route: F,
 ) -> Vec<Vec<(f64, f64)>> {
     let mut acc = Vec::new();
     for (j, &origin) in initial_positions.iter().enumerate()
@@ -877,11 +888,8 @@ pub fn build_routes(
     acc
 }
 
-pub fn build_routes_with_collision_seq(
-    initial_positions: Vec<(f64, f64)>,
-    // returns None if there is no point to build anymore
-    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
-    build_route: &dyn Fn(
+pub fn build_routes_with_collision_seq<
+    F: FnMut(
         // last position
         (f64, f64),
         // index of the route position to build
@@ -889,6 +897,11 @@ pub fn build_routes_with_collision_seq(
         // index of the route in routes
         usize,
     ) -> Option<((f64, f64), bool)>,
+>(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    mut build_route: F,
 ) -> Vec<Vec<(f64, f64)>> {
     let mut acc = Vec::new();
     for (j, &origin) in initial_positions.iter().enumerate()
@@ -942,11 +955,8 @@ pub fn build_routes_with_collision_seq(
     acc
 }
 
-pub fn build_routes_with_collision_par(
-    initial_positions: Vec<(f64, f64)>,
-    // returns None if there is no point to build anymore
-    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
-    build_route: &dyn Fn(
+pub fn build_routes_with_collision_par<
+    F: FnMut(
         // last position
         (f64, f64),
         // index of the route position to build
@@ -954,6 +964,11 @@ pub fn build_routes_with_collision_par(
         // index of the route in routes
         usize,
     ) -> Option<((f64, f64), bool)>,
+>(
+    initial_positions: Vec<(f64, f64)>,
+    // returns None if there is no point to build anymore
+    // returns Some((point, ends)) where point is the next point and ends tells if it's the last terminating point.
+    mut build_route: F,
 ) -> Vec<Vec<(f64, f64)>> {
     let len = initial_positions.len();
     let mut acc = Vec::new();
