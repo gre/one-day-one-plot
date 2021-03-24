@@ -123,6 +123,30 @@ pub fn base_a4_landscape(bg: &str) -> Document {
         .set("style", format!("background:{}", bg))
 }
 
+pub fn base_24x30_portrait(bg: &str) -> Document {
+    Document::new()
+        .set(
+            "xmlns:inkscape",
+            "http://www.inkscape.org/namespaces/inkscape",
+        )
+        .set("viewBox", (0, 0, 240, 300))
+        .set("width", "240mm")
+        .set("height", "300mm")
+        .set("style", format!("background:{}", bg))
+}
+
+pub fn base_24x30_landscape(bg: &str) -> Document {
+    Document::new()
+        .set(
+            "xmlns:inkscape",
+            "http://www.inkscape.org/namespaces/inkscape",
+        )
+        .set("viewBox", (0, 0, 300, 240))
+        .set("width", "300mm")
+        .set("height", "240mm")
+        .set("style", format!("background:{}", bg))
+}
+
 pub fn euclidian_rgb_distance(
     a: (f64, f64, f64),
     b: (f64, f64, f64),
