@@ -1060,3 +1060,52 @@ pub fn build_routes_with_collision_par<
 }
 
 // TODO remove a polygon shape on a route
+
+/**
+ * utility to count the number of items passing by a position in order to limit too much passage.
+ */
+pub struct Passage2DCounter {
+    granularity: f64,
+    width: f64,
+    height: f64,
+    counters: Vec<usize>,
+}
+impl Passage2DCounter {
+    pub fn new(
+        granularity: f64,
+        width: f64,
+        height: f64,
+    ) -> Self {
+        let wi = (width / granularity).ceil() as usize;
+        let hi = (height / granularity).ceil() as usize;
+        let counters = vec![0; wi * hi];
+        Passage2DCounter {
+            granularity,
+            width,
+            height,
+            counters,
+        }
+    }
+    fn index(self: &Self, (x, y): (f64, f64)) -> usize {
+        let wi =
+            (self.width / self.granularity).ceil() as usize;
+        let hi = (self.height / self.granularity).ceil()
+            as usize;
+        let xi = ((x / self.granularity).round() as usize)
+            .max(0)
+            .min(wi - 1);
+        let yi = ((y / self.granularity).round() as usize)
+            .max(0)
+            .min(hi - 1);
+        yi * wi + xi
+    }
+    pub fn count(self: &mut Self, p: (f64, f64)) -> usize {
+        let i = self.index(p);
+        let v = self.counters[i] + 1;
+        self.counters[i] = v;
+        v
+    }
+    pub fn get(self: &Self, p: (f64, f64)) -> usize {
+        self.counters[self.index(p)]
+    }
+}
