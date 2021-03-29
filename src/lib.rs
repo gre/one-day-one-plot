@@ -1,3 +1,4 @@
+use byteorder::*;
 use geo::*;
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
@@ -1108,4 +1109,15 @@ impl Passage2DCounter {
     pub fn get(self: &Self, p: (f64, f64)) -> usize {
         self.counters[self.index(p)]
     }
+}
+
+pub fn rng_from_seed(s: f64) -> impl Rng {
+    let mut bs = [0; 16];
+    bs.as_mut().write_f64::<BigEndian>(s).unwrap();
+    let mut rng = SmallRng::from_seed(bs);
+    // run it a while to have better randomness
+    for _i in 0..50 {
+        rng.gen::<f64>();
+    }
+    return rng;
 }

@@ -866,6 +866,7 @@ dependencies = [
 name = "gre"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "clap",
  "geo",
  "image",
